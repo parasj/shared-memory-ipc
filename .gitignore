@@ -31,3 +31,8 @@
 # Debug files
 *.dSYM/
 *.su
+
+bin/*
+src/GPATH
+src/GRTAGS
+src/GTAGS
