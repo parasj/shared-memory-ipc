@@ -1,18 +1,19 @@
-#ifndef TINYFILE_SERVER
-#define TINYFILE_SERVER
+#ifndef TINYFILE_TINY
+#define TINYFILE_TINY
 
-#define MAX_FILENAME_SIZE 100;
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
 #include <sys/msg.h>
-#include "snappy.h"
 
-const char* msgqfile = ".tiny_msgqfile";
+#define MSGQFILE "/tmp/.tiny_msgqfile"
+#define MSG_CMP_TYPE 1
+#define MSG_UNCMP_TYPE 2
 
-void initialize();
-void compress_handler();
-void uncompress_handler();
-
-typedef struct snappy_env snappy_env;
 typedef struct tiny_msgbuf {
   long mtype;
   union tiny_args {
