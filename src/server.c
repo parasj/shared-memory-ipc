@@ -5,6 +5,7 @@ typedef struct snappy_env snappy_env;
 int msqid = 0;
 
 void sigint_handler(int sig) {
+  remove(MSGQFILE);
   if(msgctl(msqid, IPC_RMID, NULL) == -1) {
     perror("[SERVER] msgctl");
   } else {
@@ -15,6 +16,11 @@ void sigint_handler(int sig) {
 
 void initialize() {
   key_t key;
+  FILE *fp = fopen(MSGQFILE, "ab+");
+  if(!fp) {
+    perror("[SERVER] fopen");
+  }
+   
   if((key = ftok(MSGQFILE, 'b')) == -1) {
     perror("[SERVER] ftok");
     exit(1);
