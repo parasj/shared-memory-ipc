@@ -1,10 +1,16 @@
 #include "snappy.h"
 #include "tiny.h"
 typedef struct snappy_env snappy_env;
+snappy_env *env;
 
 int msqid = 0;
 int last_client = 0;
 
+int shm_slots = 1; // SHMMAX issue!
+size_t shm_size = 1024 * 1024 * 2; // 4mb slots
+
+
+/* catch CTRL-C */
 struct tiny_client_list clients;
 void sigint_handler(int sig) {
   remove(MSGQFILE);
@@ -21,12 +27,14 @@ void sigint_handler(int sig) {
     sprintf(client_file, CLIENT_MSGQFILE_FMT, i->client_number);
     remove(client_file);
     if(msgctl(i->client_msgqid, IPC_RMID, NULL) == -1) {
-      perror("[SERVER] msgctl");
+      perror("[SERVER] msgctl (already closed?)");
     } else {
       fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
               i->client_number);
     }
   }
+
+  snappy_free_env(env);
 
   exit(1);
 }
@@ -36,6 +44,7 @@ void initialize() {
   FILE *fp = fopen(MSGQFILE, "ab+");
   if(!fp) {
     perror("[SERVER] fopen");
+    exit(1);
   }
    
   if((key = ftok(MSGQFILE, 'b')) == -1) {
@@ -64,11 +73,12 @@ void initialize() {
     exit(1);
   }
 
+  snappy_init_env(env);
+
   LIST_INIT(&clients);
 }
 
 void new_client_handler() {
-  // TODO: Set up shared memory
   tiny_client *client = malloc(sizeof(tiny_client));
   client->client_number = last_client;
   char client_file[50];
@@ -91,12 +101,29 @@ void new_client_handler() {
     exit(1);
   }
 
+  /** SHM init **/
+  int shmid;
+  if ((shmid = shmget(client->client_key, shm_size, 0666 | IPC_CREAT)) == -1) {
+    perror("[SERVER] shmget");
+    exit(1);
+  }
+
+  client->shm = shmat(shmid, (void *)0, 0);
+  if (client->shm == (char *)(-1)) {
+    perror("[SERVER] shmat");
+    exit(1);
+  }
+
+  ((shm_header*) client->shm)->magic_value = 123456;
+  ((shm_header*) client->shm)->used = 0;
+
   LIST_INSERT_HEAD(&clients, client, next_client);
   last_client++;
 
   tiny_msgbuf msg;
   msg.mtype = MSG_INIT_RESPONSE_TYPE;
   msg.msgdata.initialize.client_key = client->client_key;
+  msg.msgdata.initialize.shmid = shmid;
   fprintf(stdout, "[SERVER] Successfully added new client number %d with key %d\n", client->client_number, client->client_key);
   msgsnd(msqid, &msg, sizeof(tiny_msgbuf), 0);
 }
@@ -115,6 +142,13 @@ void remove_client_handler(tiny_msgbuf *msg) {
         fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
                 i->client_number);
       }
+
+      if (shmdt(i->shm) == -1) {
+        perror("[SERVER] shmdt");
+      } else {
+        fprintf(stderr, "[SERVER] Successfully cleaned up shm for client #%d\n", i->client_number);
+      }
+
       return;
     }
   }
@@ -123,55 +157,95 @@ void remove_client_handler(tiny_msgbuf *msg) {
 }
 
 void compress_handler(char *input, size_t input_length,
-                      char *compressed,
-                      size_t *compressed_length) {
-  // TODO: Actually do the compression
+                      char *compressed, size_t *compressed_length) {
   fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu,"
           "compressed: %p, compressd_length: %p}\n",
           input, input_length, compressed, compressed_length);
+  char *outbuf = (char *) malloc(shm_size);
+  int ret = snappy_compress(env, input, input_length, outbuf, compressed_length);
+  if (ret < 0)
+    printf("[SERVER] Snappy compression error - %d", ret);
+  memcpy(compressed, outbuf, *compressed_length);
+  free(outbuf);
 }
 
-void uncompress_handler(char *compressed, size_t length,
-                        char *uncompressed) {
+void uncompress_handler(char *input, size_t input_length,
+                        char *uncompressed, size_t *uncompressed_length) {
   // TODO: Actually do the decompression
   fprintf(stderr, "{type: 'uncompress', compressed: %p,"
           "length: %lu, uncompressed: %p}\n",
-          compressed, length, uncompressed);
+          input, input_length, uncompressed);
+  char *outbuf = (char *) malloc(shm_size);
+  
+  int ret = snappy_uncompress(input, input_length, outbuf);
+  if (ret < 0) {
+    printf("[SERVER] Snappy decompression error - %d", ret);
+  }
+
+  if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
+    printf("[SERVER] Snappy decompression length error - %d", ret);
+  }
+  
+  memcpy(uncompressed, outbuf, *uncompressed_length);
+  free(outbuf);
 }
 
 void serve() {
   tiny_msgbuf r;
+  tiny_client *c;
+
   while(1) {
-    // TODO: Serve all of the client queues you have 
-    msgrcv(msqid, &r, sizeof(tiny_msgbuf), 0, 0);
-    switch(r.mtype) {
-    case MSG_CMP_TYPE: {
-      compress_handler(r.msgdata.compress_args.input,
-                       r.msgdata.compress_args.input_length,
-                       r.msgdata.compress_args.compressed,
-                       r.msgdata.compress_args.compressed_length);
-      break;
+    // Step 1: service pending client registration/deregistration requests on the main message queue
+    if (msgrcv(msqid, &r, sizeof(tiny_msgbuf), -MSG_FIN_TYPE, IPC_NOWAIT) > 0) {
+      switch(r.mtype) {
+        case MSG_INIT_REQUEST_TYPE: {
+          new_client_handler();
+          break;
+        }
+
+        case MSG_FIN_TYPE: {
+          remove_client_handler(&r);
+          break;
+        }
+
+        default: {
+          fprintf(stderr, "Don't recognize message type %ld \n", r.mtype);
+          break;
+        }
+      }
     }
-    case MSG_UNCMP_TYPE: {
-      uncompress_handler(r.msgdata.uncompress_args.compressed,
-                         r.msgdata.uncompress_args.length,
-                         r.msgdata.uncompress_args.uncompressed);
-      break;
+
+    // Step 2: proportionately service each queue RR
+    // TODO implement QoS
+    LIST_FOREACH(c, &clients, next_client) {
+      if (msgrcv(c->client_msgqid, &r, sizeof(tiny_msgbuf), 0, IPC_NOWAIT) > 0) {
+        printf("Servicing %d\n", c->client_msgqid);
+        switch (r.mtype) {
+          case MSG_CMP_TYPE: {
+            compress_handler((char*) c->shm + sizeof(shm_header),
+                            ((shm_header*) c->shm)->uncompressed_length,
+                            (char*) c->shm + sizeof(shm_header),
+                            &(((shm_header*) c->shm)->compressed_length));
+            ((shm_header*) c->shm)->used = 2;
+            break;
+          }
+          
+          case MSG_UNCMP_TYPE: {
+            uncompress_handler((char*) c->shm + sizeof(shm_header),
+                            ((shm_header*) c->shm)->compressed_length,
+                            (char*) c->shm + sizeof(shm_header),
+                            &(((shm_header*) c->shm)->uncompressed_length));
+            break;
+          }
+
+          default: {
+            fprintf(stderr, "Don't recognize message type %ld (2) \n", r.mtype);
+            break;
+          }
+        }
+      }
     }
-    case MSG_INIT_REQUEST_TYPE: {
-      new_client_handler();
-      break;
-    }
-    case MSG_FIN_TYPE: {
-      remove_client_handler(&r);
-      break;
-    }
-    default: {
-      fprintf(stderr, "Don't recognize message type %ld \n",
-              r.mtype);
-      break;
-    }
-    }
+
   }
 }
  

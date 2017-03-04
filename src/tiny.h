@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/msg.h>
 #include <sys/queue.h>
 
@@ -16,10 +17,10 @@
 
 typedef enum msg_t {
   MSG_INIT_REQUEST_TYPE = 1,
+  MSG_FIN_TYPE,
   MSG_INIT_RESPONSE_TYPE,
   MSG_CMP_TYPE,
-  MSG_UNCMP_TYPE,
-  MSG_FIN_TYPE
+  MSG_UNCMP_TYPE
 } msg_t;
 
 typedef struct tiny_msgbuf {
@@ -27,21 +28,11 @@ typedef struct tiny_msgbuf {
   union tiny_args {
     struct initialize {
       int client_key;
+      int shmid;
     } initialize;
     struct finish {
       int client_key;
     } finish;
-    struct compress_args {
-      char *input;
-      size_t input_length;
-      char *compressed;
-      size_t *compressed_length;
-    } compress_args;
-    struct uncompress_args {
-      char *compressed;
-      size_t length;
-      char *uncompressed;
-    } uncompress_args;
   } msgdata;
 } tiny_msgbuf;
 
@@ -51,7 +42,16 @@ typedef struct tiny_client {
   int client_number;
   int client_key;
   int client_msgqid;
+  void *shm;
   LIST_ENTRY(tiny_client) next_client;
 } tiny_client;
+
+typedef struct shm_header {
+  int magic_value;
+  int used;
+
+  size_t uncompressed_length;
+  size_t compressed_length;
+} shm_header;
 
 #endif

@@ -4,8 +4,8 @@ LIBS = .
 SRC = src/client.c
 OBJ = $(SRC:.c=.o)
 INC1 = snappy-c/
-INCDIRS = -I${INC1}
-CFLAGS = -ggdb -Wall -std=gnu99 ${INCDIRS}
+INCDIRS = -I ${INC1}
+CFLAGS = ${INCDIRS} -L snappy-c -l :libsnappy.so.1 -ggdb -Wall -std=gnu99
 
 OUT = bin/libtinyfile.a
 
@@ -23,6 +23,6 @@ tinyd: src/server.c
 test-client: src/test-client.c ${OBJ} ${OUT}
 	$(CC) $(CFLAGS) src/test-client.c $(OUT) -o bin/test-client
 
-clean :
+clean:
 	@rm src/*.o bin/*.a bin/tinyd
 	@echo Cleaned!
