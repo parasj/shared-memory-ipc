@@ -1,4 +1,4 @@
-\documentclass[paper=a4, fontsize=11pt]{scrartcl} % A4 paper and 11pt font size
+\documentclass[paper=a4,fontsize=11pt]{report} % A4 paper and 11pt font size
 
 \usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
 \usepackage{fourier} % Use the Adobe Utopia font for the document - comment this line to return to the LaTeX default
@@ -7,6 +7,8 @@
 \usepackage{tabularx} % For tables
 \usepackage[english]{babel} % English language/hyphenation
 \usepackage{amsmath,amsfonts,amsthm} % Math packages
+
+\usepackage[margin=1.5in]{geometry}
 
 \usepackage{lipsum} % Used for inserting dummy 'Lorem ipsum' text into the template
 
@@ -28,6 +30,8 @@
 \numberwithin{table}{section} % Number tables within sections (i.e. 1.1, 1.2, 2.1, 2.2 instead of 1, 2, 3, 4)
 
 % \setlength\parindent{0pt} % Removes all indentation from paragraphs - comment this line for an assignment with lots of text
+
+\renewcommand{\thesection}{\arabic{section}}
 
 %----------------------------------------------------------------------------------------
 %	TITLE SECTION
@@ -51,13 +55,21 @@
 
 \maketitle % Print the title
 
+\section{Project goal}
+TinyFile is a service that accepts files through shared-memory IPC and then compresses/decompresses the data. Clients can communicate with the service and offload the work of compression to TinyFile. Behind TinyFile is an implementation of the \texttt{snappy} compression protocol.
+
+In order to support inter-process communication between clients and the server, both a blocking and asynchronous interfaces are availible for end users. This interface allows for data to be efficiently shuttled between the client and server process through shared memory.
+
 \section{TinyFile Architecture}
 The TinyFile application is structured as a client-server program. The server is a standalone daemon that accepts requests to compress files from clients. The client is a library that is linked into client applications that need to use the application. Client applications call exported functions from the client library to send data they want compressed to the compression server running separately as a daemon, which responds with the compressed version of the file.
+
 \subsection{Server Design}
+The server \texttt{bin/tinyd} allows users to start a daemon which listens for incoming compression requests. After initialization, the server alternates between servicing client requests to join/leave the service and actual compression requests.
+
 \subsubsection{Data Structures}
 The server maintains state for each client it is currently communicating with, and calls out to the snappy-c library to actually perform the requested compression. Client state is tracked in a linked-list structure that records, for each client, the private message queue and the shared memory segment used to perform client-server communication.
 
-\begin{figure}
+\begin{figure}[b!]
   \includegraphics[width=\linewidth]{img/ll.png}
   \caption{Server data structures}
 \end{figure}
