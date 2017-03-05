@@ -235,6 +235,7 @@ void serve() {
                             ((shm_header*) c->shm)->compressed_length,
                             (char*) c->shm + sizeof(shm_header),
                             &(((shm_header*) c->shm)->uncompressed_length));
+            ((shm_header*) c->shm)->used = 2;
             break;
           }
 
@@ -246,6 +247,7 @@ void serve() {
       }
     }
 
+    usleep(100); // sleep a bit so we don't hog 100% CPU (because of IPC_NOWAIT)
   }
 }
  

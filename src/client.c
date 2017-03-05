@@ -79,7 +79,7 @@ void tiny_compress() {
     usleep(10000);
   }
 
-  printf("GOT COMPRESSED RESULT! size %zu\n", ((shm_header*) shm)->compressed_length);
+  printf("GOT COMPRESSED RESULT! size %zu str %s\n", ((shm_header*) shm)->compressed_length, input_buf);
 
   ((shm_header*) shm)->used = 0;
 }
@@ -93,8 +93,7 @@ void tiny_uncompress() {
 
   ((shm_header*) shm)->used = 1;
   char *input_buf = ((char*) shm) + sizeof(shm_header);
-  strcpy(input_buf, "1234");
-  ((shm_header*) shm)->compressed_length = sizeof("1234"); // put size here!
+  ((shm_header*) shm)->compressed_length = 7;
   ((shm_header*) shm)->uncompressed_length = -1;
 
   msg.mtype = MSG_UNCMP_TYPE;
@@ -104,7 +103,7 @@ void tiny_uncompress() {
     usleep(10000);
   }
 
-  printf("GOT DECOMPRESSED RESULT! size %zu\n", ((shm_header*) shm)->compressed_length);
+  printf("GOT DECOMPRESSED RESULT! size %zu str %s\n", ((shm_header*) shm)->compressed_length, input_buf);
 
   ((shm_header*) shm)->used = 0;
 }
