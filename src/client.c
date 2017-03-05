@@ -53,6 +53,11 @@ void tiny_initialize() {
 }
 
 void tiny_finish() {
+  if (shmdt(shm) < 0) {
+    perror("[CLIENT] shmdt");
+    exit(1);
+  }
+
   tiny_msgbuf msg;
   msg.mtype = MSG_FIN_TYPE;
   msg.msgdata.finish.client_key = key;
@@ -79,7 +84,7 @@ void tiny_compress() {
     usleep(10000);
   }
 
-  printf("GOT COMPRESSED RESULT! size %zu str %s\n", ((shm_header*) shm)->compressed_length, input_buf);
+  printf("GOT COMPRESSED RESULT! size %zu str %.7s\n", ((shm_header*) shm)->compressed_length, input_buf);
 
   ((shm_header*) shm)->used = 0;
 }

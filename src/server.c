@@ -7,9 +7,13 @@ snappy_env env;
 int msqid = 0;
 int last_client = 0;
 
-int shm_slots = 1; // SHMMAX issue!
-size_t shm_size = 1024 * 1024 * 2; // 4mb slots
 struct tiny_client_list clients;
+
+int shm_slots;
+size_t shm_size;
+
+// shared compression/decompression buffer
+char *outbuf;
 
 /* catch CTRL-C */
 
@@ -33,15 +37,21 @@ void sigint_handler(int sig) {
       fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
               i->client_number);
     }
+    if (shmdt(i->shm) == -1 || shmctl(i->shmid, IPC_RMID, NULL)) {
+      perror("[SERVER] shmdt or shctl (already closed?)");
+    } else {
+      fprintf(stderr, "[SERVER] Successfully cleaned up shm for client #%d\n", i->client_number);
+    }
     free(i);
   }
 
   snappy_free_env(&env);
+  free(outbuf);
 
   exit(1);
 }
 
-void initialize() {
+void initialize(int nslots, ssize_t buf_size) {
   key_t key;
   FILE *fp = fopen(MSGQFILE, "ab+");
   if(!fp) {
@@ -71,13 +81,17 @@ void initialize() {
   }
 
   if(sigaction(SIGSEGV, &sa, NULL) == -1) {
-    perror("[SERVER] sigaction");
+    perror("[SERVER] sigaction (1)");
     exit(1);
   }
 
   snappy_init_env(&env);
-
   LIST_INIT(&clients);
+
+  shm_slots = nslots;
+  shm_size = buf_size;
+
+  outbuf = (char *) malloc(shm_size);
 }
 
 void new_client_handler() {
@@ -97,19 +111,21 @@ void new_client_handler() {
     exit(1);
   }
 
-  if((client->client_msgqid = msgget(client->client_key,
-                                     0666 | IPC_CREAT)) == -1) {
+  if((client->client_msgqid = msgget(client->client_key, 0666 | IPC_CREAT)) == -1) {
     perror("[SERVER] new client msgget");
     exit(1);
   }
 
   /** SHM init **/
   int shmid;
-  if ((shmid = shmget(client->client_key, shm_size, 0666 | IPC_CREAT)) == -1) {
+  size_t shmtot = shm_size * shm_slots + sizeof(shm_header);
+  printf("[SERVER] allocating SHM segment size %zu\n", shmtot);
+  if ((shmid = shmget(client->client_key, shmtot, 0666 | IPC_CREAT)) == -1) {
     perror("[SERVER] shmget");
     exit(1);
   }
 
+  client->shmid = shmid;
   client->shm = shmat(shmid, (void *)0, 0);
   if (client->shm == (char *)(-1)) {
     perror("[SERVER] shmat");
@@ -117,7 +133,7 @@ void new_client_handler() {
   }
 
   ((shm_header*) client->shm)->magic_value = 123456;
-  ((shm_header*) client->shm)->used = 0;
+  ((shm_header*) client->shm)->used = 0; // todo
 
   LIST_INSERT_HEAD(&clients, client, next_client);
   last_client++;
@@ -145,11 +161,12 @@ void remove_client_handler(tiny_msgbuf *msg) {
                 i->client_number);
       }
 
-      if (shmdt(i->shm) == -1) {
-        perror("[SERVER] shmdt");
+      if (shmdt(i->shm) == -1 || shmctl(i->shmid, IPC_RMID, NULL)) {
+        perror("[SERVER] shmdt or shctl");
       } else {
         fprintf(stderr, "[SERVER] Successfully cleaned up shm for client #%d\n", i->client_number);
       }
+      
 
       return;
     }
@@ -158,38 +175,28 @@ void remove_client_handler(tiny_msgbuf *msg) {
   fprintf(stderr, "[SERVER] Asked to remove non-existent client number %d\n", msg->msgdata.finish.client_key);
 }
 
-void compress_handler(char *input, size_t input_length,
-                      char *compressed, size_t *compressed_length) {
-  fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu,"
-          "compressed: %p, compressd_length: %p}\n",
-          input, input_length, compressed, compressed_length);
-  char *outbuf = (char *) malloc(shm_size);
-  int ret = snappy_compress(&env, input, input_length, outbuf, compressed_length);
-  if (ret < 0)
-    printf("[SERVER] Snappy compression error - %d", ret);
-  memcpy(compressed, outbuf, *compressed_length);
-  free(outbuf);
+void compress_handler(char *input, size_t input_length, char *compressed, size_t *compressed_length) {
+  fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu, compressed: %p, compressd_length: %p}\n", input, input_length, compressed, compressed_length);
+
+  if (snappy_compress(&env, input, input_length, outbuf, compressed_length) < 0) {
+    printf("[SERVER] Snappy compression error");
+  } else {
+    memcpy(compressed, outbuf, *compressed_length);
+  }
 }
 
-void uncompress_handler(char *input, size_t input_length,
-                        char *uncompressed, size_t *uncompressed_length) {
-  // TODO: Actually do the decompression
-  fprintf(stderr, "{type: 'uncompress', compressed: %p,"
-          "length: %lu, uncompressed: %p}\n",
-          input, input_length, uncompressed);
-  char *outbuf = (char *) malloc(shm_size);
+void uncompress_handler(char *input, size_t input_length, char *uncompressed, size_t *uncompressed_length) {
+  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p}\n", input, input_length, uncompressed);
   
-  int ret = snappy_uncompress(input, input_length, outbuf);
-  if (ret < 0) {
-    printf("[SERVER] Snappy decompression error - %d", ret);
+  if (snappy_uncompress(input, input_length, outbuf) < 0) {
+    printf("[SERVER] Snappy decompression error");
+  } else {
+    if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
+      printf("[SERVER] Snappy decompression length error");
+    } else {
+      memcpy(uncompressed, outbuf, *uncompressed_length);
+    }
   }
-
-  if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
-    printf("[SERVER] Snappy decompression length error - %d", ret);
-  }
-  
-  memcpy(uncompressed, outbuf, *uncompressed_length);
-  free(outbuf);
 }
 
 void serve() {
@@ -254,6 +261,6 @@ void serve() {
 }
  
 int main(int argc, char *argv[]) {
-  initialize();
+  initialize(3, 1024 * 1024);
   serve();
 }
