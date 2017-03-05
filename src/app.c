@@ -1,16 +1,22 @@
 #include "client.h"
 
-void handle_done(tiny_async_args ctx, void *args) {
-  (*((int*) args))++;
-  printf("Done compressing! %d\n", *((int*)args));
-
-  // dispatch uncompress IPC
-  
+void handle_done_un(tiny_async_args ctx, void *args) {
+    (*((int*) args))++;
+    printf("Done uncompressing! %zu bytes -> %zu bytes\n", ctx.insz, ctx.outsz);
+    free(ctx.inbuf);
 }
 
-void handle_done_un(tiny_async_args ctx, void *args) {
-  (*((int*) args))++;
-  printf("Done uncompressing! %d\n", *((int*)args));
+void handle_done(tiny_async_args ctx, void *args) {
+    (*((int*) args))++;
+    printf("Done compressing! %zu bytes -> %zu bytes\n", ctx.insz, ctx.outsz);
+
+    // dispatch uncompress IPC
+    tiny_notifier notif;
+    notif.notify_function = handle_done_un;
+
+    char *buf = (char *) malloc(ctx.outsz * sizeof(char));
+    memcpy(buf, ctx.outbuf, ctx.outsz);
+    tiny_uncompress_async(buf, ctx.outsz, notif);
 }
 
 int main(int argc, char *argv[]) {

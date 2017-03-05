@@ -266,8 +266,8 @@ void serve() {
 }
  
 int main(int argc, char *argv[]) {
-  int nsegments = 8;
-  size_t segsz = 1024 * 1024 * 1.5;
+  int nsegments = 1;
+  size_t segsz = 1024 * 1024 * 10;
 
   int c;
 
