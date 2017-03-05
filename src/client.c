@@ -121,7 +121,6 @@ void tiny_compress_async(char *inbuf, size_t insz, tiny_notifier notif) {
         notif.notify_function(ctx, notif.notify_args);
         free(ctx.outbuf);
         exit(1);
-        return;
     } else {
         return;
     }
@@ -140,7 +139,6 @@ void tiny_uncompress_async(char *inbuf, size_t insz, tiny_notifier notif) {
         notif.notify_function(ctx, notif.notify_args);
         free(ctx.outbuf);
         exit(1);
-        return;
     } else {
         return;
     }

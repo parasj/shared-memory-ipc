@@ -27,5 +27,6 @@ test-client: src/test-client.c ${OBJ} ${OUT}
 	$(CC) $(CFLAGS) src/test-client.c $(OUT) -o bin/test-client
 
 clean:
+	@rm -rf /tmp/.tiny_msgqfile*
 	@rm src/*.o bin/*.a bin/tinyd
 	@echo Cleaned!

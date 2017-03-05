@@ -4,6 +4,7 @@ void handle_done_un(tiny_async_args ctx, void *args) {
     (*((int*) args))++;
     printf("Done uncompressing! %zu bytes -> %zu bytes\n", ctx.insz, ctx.outsz);
     free(ctx.inbuf);
+    tiny_finish();
 }
 
 void handle_done(tiny_async_args ctx, void *args) {
@@ -28,6 +29,10 @@ int main(int argc, char *argv[]) {
     int c;
 
     opterr = 0;
+
+    if(argc < 2) {
+      
+    }
 
     while ((c = getopt(argc, argv, "an:s:")) != -1)
         switch (c) {
@@ -100,16 +105,11 @@ int main(int argc, char *argv[]) {
         } else { // async mode: dispatch compression event requests
             notif.notify_function = handle_done;
             notif.notify_args = &event_count;
-
             tiny_compress_async(filebuf, filelen, notif);
         }
-
         free(filebuf);
     }
 
-    if (asyncFlag) {
-        sleep(15);
-        
-        printf("done");
-    }
+    sleep(5);
+    exit(0);
 }
