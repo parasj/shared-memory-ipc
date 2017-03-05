@@ -110,9 +110,10 @@ Specifically, the process of compressing a file using the blocking API is as fol
 
 \subsubsection{Cleaning Up}
 
-Clients degister themselves by sending a message on the main server IPC queue (not the private queue). The server recieves the message off the bus and then 
+Clients degister themselves by sending a message on the main server IPC queue (not the private queue). The server recieves the message off the bus and then deallocated relevant data structures. This includes closing the message queue and and marking the shared memory region for deletion. Clients can then quit. When a \texttt{ctrl-c} signal is recieved, the system cleans up after each client before exiting safely.
 
 \section{API}
+
 \section{Performance}
 
 \end{document}
