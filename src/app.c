@@ -23,7 +23,7 @@ void handle_done(tiny_async_args ctx, void *args) {
 int main(int argc, char *argv[]) {
     int asyncFlag = 0;
     int nfiles = 0;
-    char *filenames[32];
+    char *filenames[512];
     
     int index;
     int c;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
         }
 
     nfiles = argc - optind;
-    assert(nfiles > 0 && nfiles < 33);
+    assert(nfiles > 0 && nfiles < 513);
     printf ("async = %d len(files) = %d\n", asyncFlag, nfiles);
 
     for (index = optind; index < argc; index++)
