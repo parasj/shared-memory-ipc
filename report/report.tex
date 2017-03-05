@@ -74,10 +74,16 @@ The server maintains state for each client it is currently communicating with, a
   \caption{Server data structures}
 \end{figure}
 
-Apart from private message queues for each client, the server also has a global shared message queue that is available to all clients. This queue is used to initialize clients, as described in the following section, and for nothing else.
+Apart from private message queues for each client, the server also has a global shared message queue that is available to all clients. This queue is used to initialize clients, as described in the following section, and for nothing else. Requests to join/leave the service can therefore be handled independently from actual service IPC traffic.
 
 \subsubsection{Client Initialization}
 When a new client comes online, it must register with the server using the \texttt{tiny\_initialize} function exported by the library. The initialization function uses the global shared message queue to send an initialization request to the server, invoking a series of initialization procedures on the server side that comprise the initial client-server handshake.
+
+\begin{figure}[b!]
+  \includegraphics[width=\linewidth]{img/init.png}
+  \caption{Initialization race condition}
+\end{figure}
+
 \begin{enumerate}
 \item Memory is allocated to store the new client's state.
 \item The client is assigned new unique id and a temporary file.
@@ -86,17 +92,25 @@ When a new client comes online, it must register with the server using the \text
 \item The new client is placed at the head of the global clients list.
 \end{enumerate}
 
-\begin{figure}
-  \includegraphics[width=\linewidth]{img/init.png}
-  \caption{Initialization race condition}
-\end{figure}
-
 Once all of this is done, the server responds with a message that contains the \texttt{client\_key} created from the client's temporary file, which is the only information the client needs to connect to its private message queue and shared memory segment. The initialization request and response are sent over the global shared message queue common to all clients. This introduces the possibility of a race condition in since there is no guarantee that a particular response will reach exactly the client it was sent from. This is not really a problem, as the clients are essentially indistinguishable until the handshake is completed, and so a situation in which a client reads an initialization response message intended for another client is never problematic; the original client will simply receive a response message intended for yet another client, and all clients end up with unique IDs and keys in the end. Notice that mixing up of messages is not an issue once the handshake is done. The global shared message queue is only used for initialization; all subsequent messages between a server and client go through a per-client client-private message queue that is initialized during the handshake.
 
 \subsubsection{Compressing/Uncompressing Data}
+Once the client link is established, each client can communicate over its own message queue with the server. This private line contains requests from the client to the server to process a request. Service data is delivered through the shared memory and a response is finally communicated back through the shared store.
+
+Specifically, the process of compressing a file using the blocking API is as follows:
+\begin{enumerate}
+\item The client reads the file into a buffer
+\item Client calls \texttt{tiny\_compress}, passing in the buffer and file size
+\item The client library places the relevant arguments in the shared memory header \texttt{shm\_header} and then copies the file buffer into the shared memory space
+\item The client library then sends a message to the server to request decompression
+\item When the server main loop services the relevant client queue, it invokes snappy to compress the buffer. It then copies the result back into shared memory.
+\item The server notifies the client that compression occurred through shared memory
+\item The client can copy the resulting compressed file from shared memory, thus freeing the region for use in the next call
+\end{enumerate}
 
 \subsubsection{Cleaning Up}
 
+Clients degister themselves by sending a message on the main server IPC queue (not the private queue). The server recieves the message off the bus and then 
 
 \section{API}
 \section{Performance}
