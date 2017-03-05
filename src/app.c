@@ -1,11 +1,14 @@
 #include "client.h"
 
-void handle_done(void *args) {
+void handle_done(tiny_async_args ctx, void *args) {
   (*((int*) args))++;
   printf("Done compressing! %d\n", *((int*)args));
+
+  // dispatch uncompress IPC
+  
 }
 
-void handle_done_un(void *args) {
+void handle_done_un(tiny_async_args ctx, void *args) {
   (*((int*) args))++;
   printf("Done uncompressing! %d\n", *((int*)args));
 }
@@ -54,11 +57,9 @@ int main(int argc, char *argv[]) {
 
     char *outbuf;
     size_t outlen;
-    
-    // tiny_notifier notif;
-    // int event_count = 0; 
-    // notif.notify_function = handle_done;
-    // notif.notify_args = &event_count;
+
+    tiny_notifier notif;
+    int event_count = 0;
 
     tiny_initialize();
 
@@ -71,9 +72,9 @@ int main(int argc, char *argv[]) {
         filebuf = (char*) malloc((filelen) * sizeof(char));
         fread(filebuf, filelen, 1, fileptr);
         fclose(fileptr);
-        
+
         if (!asyncFlag) { // blocking mode
-            outbuf = (char*) malloc((filelen) * sizeof(char));
+            outbuf = (char*) malloc((filelen) * sizeof(char) * 2); // compressed could be bigger than input size!
             
             tiny_compress(filebuf, filelen, outbuf, &outlen);
             tiny_uncompress(outbuf, outlen, outbuf, &outlen);
@@ -90,10 +91,19 @@ int main(int argc, char *argv[]) {
             printf(") => %s\n", memcmp(filebuf, outbuf, filelen) ? "mismatch" : "match");
             
             free(outbuf);
-        } else { // async mode
+        } else { // async mode: dispatch compression event requests
+            notif.notify_function = handle_done;
+            notif.notify_args = &event_count;
 
+            tiny_compress_async(filebuf, filelen, notif);
         }
 
         free(filebuf);
+    }
+
+    if (asyncFlag) {
+        sleep(15);
+        
+        printf("done");
     }
 }

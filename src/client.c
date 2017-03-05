@@ -46,15 +46,13 @@ void tiny_initialize() {
     }
 
     printf("[CLIENT] magic value %d (should be 123456)\n", ((shm_header*) shm)->magic_value);
-
 }
 
 void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     tiny_msgbuf msg;
     char *input_buf;
 
-    while (((shm_header*) shm)->used > 0)
-        usleep(10000);
+    while (((shm_header*) shm)->used > 0) {}
 
     {
         ((shm_header*) shm)->used = 1;
@@ -68,8 +66,7 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
         msgsnd(msgqid, &msg, sizeof(tiny_msgbuf), 0);
     }
     
-    while (((shm_header*) shm)->used < 2)
-        usleep(10000);
+    while (((shm_header*) shm)->used < 2) {}
 
     *outsz = ((shm_header*) shm)->compressed_length;
     memcpy(outbuf, input_buf, *outsz);
@@ -81,8 +78,7 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     tiny_msgbuf msg;
     char *input_buf;
 
-    while (((shm_header*) shm)->used > 0)
-        usleep(10000);
+    while (((shm_header*) shm)->used > 0) {}
 
     {
         ((shm_header*) shm)->used = 1;
@@ -97,8 +93,7 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
         msgsnd(msgqid, &msg, sizeof(tiny_msgbuf), 0);
     }
 
-    while (((shm_header*) shm)->used < 2)
-        usleep(10000);
+    while (((shm_header*) shm)->used < 2) {}
 
     *outsz = ((shm_header*) shm)->uncompressed_length;
     memcpy(outbuf, input_buf, *outsz);
@@ -106,10 +101,19 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     ((shm_header*) shm)->used = 0;
 }
 
-void tiny_compress_async(tiny_notifier notif) {
+void tiny_compress_async(char *inbuf, size_t insz, tiny_notifier notif) {
+    tiny_async_args ctx;
+
+    ctx.task = 0;
+    ctx.inbuf = inbuf;
+    ctx.insz = insz;
+    ctx.outsz = -1;
+
     if (!fork()) {
-        // tiny_compress(); // todo
-        notif.notify_function(notif.notify_args);
+        ctx.outbuf = (char*) malloc(ctx.insz * 2);
+        tiny_compress(ctx.inbuf, ctx.insz, ctx.outbuf, &ctx.outsz);
+        notif.notify_function(ctx, notif.notify_args);
+        free(ctx.outbuf);
         exit(1);
         return;
     } else {
@@ -117,10 +121,18 @@ void tiny_compress_async(tiny_notifier notif) {
     }
 }
 
-void tiny_uncompress_async(tiny_notifier notif) {
+void tiny_uncompress_async(char *inbuf, size_t insz, tiny_notifier notif) {
+    tiny_async_args ctx;
+    ctx.task = 1;
+    ctx.inbuf = inbuf;
+    ctx.insz = insz;
+    ctx.outsz = -1;
+
     if (!fork()) {
-        // tiny_uncompress(); // todo
-        notif.notify_function(notif.notify_args);
+        ctx.outbuf = (char*) malloc(ctx.insz * 2);
+        tiny_uncompress(ctx.inbuf, ctx.insz, ctx.outbuf, &ctx.outsz);
+        notif.notify_function(ctx, notif.notify_args);
+        free(ctx.outbuf);
         exit(1);
         return;
     } else {
