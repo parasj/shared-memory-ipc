@@ -43,6 +43,7 @@ typedef struct tiny_client {
   int client_number;
   int client_key;
   int client_msgqid;
+  int shmid;
   void *shm;
   LIST_ENTRY(tiny_client) next_client;
 } tiny_client;
