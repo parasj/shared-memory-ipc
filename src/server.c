@@ -1,6 +1,7 @@
 #include "snappy.h"
 #include "tiny.h"
 typedef struct snappy_env snappy_env;
+
 snappy_env env;
 
 int msqid = 0;
@@ -8,10 +9,10 @@ int last_client = 0;
 
 int shm_slots = 1; // SHMMAX issue!
 size_t shm_size = 1024 * 1024 * 2; // 4mb slots
-
+struct tiny_client_list clients;
 
 /* catch CTRL-C */
-struct tiny_client_list clients;
+
 void sigint_handler(int sig) {
   remove(MSGQFILE);
   if(msgctl(msqid, IPC_RMID, NULL) == -1) {
@@ -32,6 +33,7 @@ void sigint_handler(int sig) {
       fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
               i->client_number);
     }
+    free(i);
   }
 
   snappy_free_env(&env);
