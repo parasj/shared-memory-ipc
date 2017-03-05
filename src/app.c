@@ -12,10 +12,8 @@ void handle_done_un(void *args) {
 
 int main(int argc, char *argv[]) {
     int asyncFlag = 0;
-    int nsegments = 8;
-    size_t segsz = 1024 * 1024;
     int nfiles = 0;
-    char *filenames[32]; // MAXFILES
+    char *filenames[32];
     
     int index;
     int c;
@@ -26,12 +24,6 @@ int main(int argc, char *argv[]) {
         switch (c) {
         case 'a':
             asyncFlag = 1;
-            break;
-        case 'n':
-            nsegments = atoi(optarg);
-            break;
-        case 's':
-            segsz = atoi(optarg);
             break;
         case '?':
             if (optopt == 'c')
@@ -47,18 +39,25 @@ int main(int argc, char *argv[]) {
 
     nfiles = argc - optind;
     assert(nfiles > 0 && nfiles < 33);
-    printf ("async = %d, nsegments = %d, segsz = %zu, len(files) = %d\n", asyncFlag, nsegments, segsz, nfiles);
+    printf ("async = %d len(files) = %d\n", asyncFlag, nfiles);
 
     for (index = optind; index < argc; index++)
         filenames[index - optind] = argv[index];
 
     /*****************************************
-     * BEGIN APPLICATION
-     ****************************************/
-    
+    * BEGIN APPLICATION
+    *****************************************/
+
     FILE *fileptr;
     char *buffer;
     long filelen;
+    
+    // tiny_notifier notif;
+    // int event_count = 0; 
+    // notif.notify_function = handle_done;
+    // notif.notify_args = &event_count;
+
+    tiny_initialize();
 
     for (index = 0; index < nfiles; ++index) {
         fileptr = fopen(filenames[index], "rb");
@@ -79,13 +78,6 @@ int main(int argc, char *argv[]) {
         free(buffer);
     }
 
-    // tiny_notifier notif;
-    // int event_count = 0; 
-
-    // notif.notify_function = handle_done;
-    // notif.notify_args = &event_count;
-
-    // tiny_initialize();
     // tiny_compress();
     // tiny_uncompress();
     // tiny_compress();

@@ -259,6 +259,35 @@ void serve() {
 }
  
 int main(int argc, char *argv[]) {
-  initialize(3, 1024 * 1024);
+  int nsegments = 8;
+  size_t segsz = 1024 * 1024;
+
+  int c;
+
+  opterr = 0;
+
+  while ((c = getopt(argc, argv, "n:s:")) != -1)
+      switch (c) {
+      case 'n':
+          nsegments = atoi(optarg);
+          break;
+      case 's':
+          segsz = atoi(optarg);
+          break;
+      case '?':
+          if (optopt == 'c')
+              fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+          else if (isprint(optopt))
+              fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+          else
+              fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+          return 1;
+      default:
+          abort();
+      }
+
+  printf ("[SERVER] nsegments = %d, segsz = %zu\n", nsegments, segsz);
+
+  initialize(nsegments, segsz);
   serve();
 }
