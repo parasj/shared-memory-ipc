@@ -55,8 +55,8 @@ void tiny_initialize() {
 void tiny_compress() {
   tiny_msgbuf msg;
 
-  if (((shm_header*) shm)->used > 0) {
-    printf("[CLIENT] shm is used!\n");
+  while (((shm_header*) shm)->used > 0) {
+    usleep(10000);
   }
 
   ((shm_header*) shm)->used = 1;
@@ -84,8 +84,8 @@ void tiny_compress() {
 void tiny_uncompress() {
   tiny_msgbuf msg;
 
-  if (((shm_header*) shm)->used > 0) {
-    printf("[CLIENT] shm is used!\n");
+  while (((shm_header*) shm)->used > 0) {
+    usleep(10000);
   }
 
   ((shm_header*) shm)->used = 1;

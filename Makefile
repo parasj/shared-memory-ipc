@@ -9,7 +9,7 @@ CFLAGS = ${INCDIRS} -ggdb -Wall -std=gnu99
 
 OUT = bin/libtinyfile.a
 
-all: ${OUT} tinyd test-client
+all: ${OUT} tinyd test-client tiny
 
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -19,6 +19,9 @@ $(OUT): $(OBJ)
 
 tinyd: src/server.c
 	$(CC) $(CFLAGS) src/server.c -o bin/tinyd ${LDFLAGS}
+
+tiny: src/app.c ${OBJ} ${OUT}
+	$(CC) $(CFLAGS) src/app.c $(OUT) -o bin/tiny
 
 test-client: src/test-client.c ${OBJ} ${OUT}
 	$(CC) $(CFLAGS) src/test-client.c $(OUT) -o bin/test-client

@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <ctype.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
