@@ -175,19 +175,27 @@ void remove_client_handler(tiny_msgbuf *msg) {
   fprintf(stderr, "[SERVER] Asked to remove non-existent client number %d\n", msg->msgdata.finish.client_key);
 }
 
-void compress_handler(char *input, size_t input_length, char *compressed, size_t *compressed_length) {
+double compress_handler(char *input, size_t input_length, char *compressed, size_t *compressed_length) {
   assert(input_length <= shm_size);
+
+  start();
 
   if (snappy_compress(&env, input, input_length, outbuf, compressed_length) < 0) {
     printf("[SERVER] Snappy compression error");
   } else {
     memcpy(compressed, outbuf, *compressed_length);
   }
-  fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu, compressed: %p, compressed_length: %lu}\n", input, input_length, compressed, *compressed_length);
+  // fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu, compressed: %p, compressed_length: %lu}\n", input, input_length, compressed, *compressed_length);
+  
+  end();
+  fprintf(stderr, "{\"op\": \"snappy_compress\", \"time\": %f, \"file_size\": %zu},\n", TIME, input_length);
+  return TIME;
 }
 
-void uncompress_handler(char *input, size_t input_length, char *uncompressed, size_t *uncompressed_length) {
+double uncompress_handler(char *input, size_t input_length, char *uncompressed, size_t *uncompressed_length) {
   assert(input_length <= shm_size);
+
+  start();
 
   if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
     printf("[SERVER] Snappy decompression length error");
@@ -201,7 +209,9 @@ void uncompress_handler(char *input, size_t input_length, char *uncompressed, si
     memcpy(uncompressed, outbuf, *uncompressed_length);
   }
 
-  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p, uncompressed_length: %zu}\n", input, input_length, uncompressed, *uncompressed_length);
+  end();
+  return TIME;
+  // fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p, uncompressed_length: %zu}\n", input, input_length, uncompressed, *uncompressed_length);
 }
 
 void serve() {
@@ -236,7 +246,8 @@ void serve() {
         printf("[SERVER] Servicing %d\n", c->client_msgqid);
         switch (r.mtype) {
           case MSG_CMP_TYPE: {
-            compress_handler((char*) c->shm + sizeof(shm_header),
+            ((shm_header*) c->shm)->snappy_time =
+              compress_handler((char*) c->shm + sizeof(shm_header),
                             ((shm_header*) c->shm)->uncompressed_length,
                             (char*) c->shm + sizeof(shm_header),
                             &(((shm_header*) c->shm)->compressed_length));
@@ -245,7 +256,8 @@ void serve() {
           }
           
           case MSG_UNCMP_TYPE: {
-            uncompress_handler((char*) c->shm + sizeof(shm_header),
+            ((shm_header*) c->shm)->snappy_time =
+              uncompress_handler((char*) c->shm + sizeof(shm_header),
                             ((shm_header*) c->shm)->compressed_length,
                             (char*) c->shm + sizeof(shm_header),
                             &(((shm_header*) c->shm)->uncompressed_length));
@@ -261,10 +273,10 @@ void serve() {
       }
     }
 
-    usleep(100); // sleep a bit so we don't hog 100% CPU (because of IPC_NOWAIT)
+    // usleep(100); // sleep a bit so we don't hog 100% CPU (because of IPC_NOWAIT)
   }
 }
- 
+
 int main(int argc, char *argv[]) {
   int nsegments = 1;
   size_t segsz = 1024 * 1024 * 10;

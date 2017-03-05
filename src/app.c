@@ -82,19 +82,8 @@ int main(int argc, char *argv[]) {
         if (!asyncFlag) { // blocking mode
             outbuf = (char*) malloc((filelen) * sizeof(char) * 2); // compressed could be bigger than input size!
             
-            {
-                start();
-                tiny_compress(filebuf, filelen, outbuf, &outlen);
-                end();
-                fprintf(stderr, "{\"op\": \"compress_blocking\", \"time\": %f, \"file_size\": %zu},\n", TIME, filelen);
-            }
-            
-            {
-                start();
-                tiny_uncompress(outbuf, outlen, outbuf, &outlen);
-                end();
-                fprintf(stderr, "{\"op\": \"uncompress_blocking\", \"time\": %f, \"file_size\": %zu},\n", TIME, filelen);
-            }
+            tiny_compress(filebuf, filelen, outbuf, &outlen);
+            tiny_uncompress(outbuf, outlen, outbuf, &outlen);
 
             printf("%s (", filenames[index]);
             if (outlen < 1024) {

@@ -19,6 +19,7 @@
 #define MSGQFILE "/tmp/.tiny_msgqfile"
 #define CLIENT_MSGQFILE_FMT "/tmp/.tiny_msgqfile.%d"
 
+// from https://github.com/emorins/gettimeofday_macro/blob/master/gettimeofday_macro.h
 #define start() struct timeval ts;gettimeofday(&ts, NULL)
 #define end()   struct timeval te;gettimeofday(&te, NULL);double startTime=ts.tv_sec+ts.tv_usec*1e-6;double endTime = te.tv_sec+te.tv_usec*1e-6
 #define TIME    endTime - startTime
@@ -58,6 +59,7 @@ typedef struct tiny_client {
 typedef struct shm_header {
   int magic_value;
   int used;
+  double snappy_time;
 
   size_t uncompressed_length;
   size_t compressed_length;

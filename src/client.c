@@ -54,6 +54,7 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
 
     while (((shm_header*) shm)->used > 0) {}
 
+    start();
     {
         ((shm_header*) shm)->used = 1;
         input_buf = ((char*) shm) + sizeof(shm_header);
@@ -67,10 +68,12 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     }
     
     while (((shm_header*) shm)->used < 2) {}
+    end();
 
     *outsz = ((shm_header*) shm)->compressed_length;
-    memcpy(outbuf, input_buf, *outsz);
+    fprintf(stderr, "{\"op\": \"compress_blocking\", \"total_time\": %f, \"ipc_time\": %f, \"file_size\": %zu},\n", TIME, TIME - ((shm_header*) shm)->snappy_time, insz);
 
+    memcpy(outbuf, input_buf, *outsz);
     ((shm_header*) shm)->used = 0;
 }
 
@@ -80,6 +83,7 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
 
     while (((shm_header*) shm)->used > 0) {}
 
+    start();
     {
         ((shm_header*) shm)->used = 1;
         
@@ -94,10 +98,12 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     }
 
     while (((shm_header*) shm)->used < 2) {}
+    end();
 
     *outsz = ((shm_header*) shm)->uncompressed_length;
-    memcpy(outbuf, input_buf, *outsz);
+    fprintf(stderr, "{\"op\": \"uncompress_blocking\", \"total_time\": %f, \"ipc_time\": %f, \"file_size\": %zu},\n", TIME, TIME - ((shm_header*) shm)->snappy_time, *outsz);
 
+    memcpy(outbuf, input_buf, *outsz);
     ((shm_header*) shm)->used = 0;
 }
 
