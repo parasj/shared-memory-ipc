@@ -52,18 +52,6 @@ void tiny_initialize() {
   
 }
 
-void tiny_finish() {
-  if (shmdt(shm) < 0) {
-    perror("[CLIENT] shmdt");
-    exit(1);
-  }
-
-  tiny_msgbuf msg;
-  msg.mtype = MSG_FIN_TYPE;
-  msg.msgdata.finish.client_key = key;
-  msgsnd(daemonq, &msg, sizeof(tiny_msgbuf), 0);
-}
-
 void tiny_compress() {
   tiny_msgbuf msg;
 
@@ -84,7 +72,11 @@ void tiny_compress() {
     usleep(10000);
   }
 
-  printf("GOT COMPRESSED RESULT! size %zu str %.7s\n", ((shm_header*) shm)->compressed_length, input_buf);
+  printf("GOT COMPRESSED RESULT! size %zu str: ",
+         ((shm_header*) shm)->compressed_length);
+  for(int i = 0; input_buf[i]; i++)
+    printf("%02x",input_buf[i]);
+  printf("\n");
 
   ((shm_header*) shm)->used = 0;
 }
@@ -108,7 +100,42 @@ void tiny_uncompress() {
     usleep(10000);
   }
 
-  printf("GOT DECOMPRESSED RESULT! size %zu str %s\n", ((shm_header*) shm)->compressed_length, input_buf);
+  printf("GOT DECOMPRESSED RESULT! size %zu str: %s\n",
+         ((shm_header*) shm)->compressed_length, input_buf);
 
   ((shm_header*) shm)->used = 0;
+}
+
+void tiny_compress_async(tiny_notifier notif) {
+  if(!fork()) {
+    tiny_compress();
+    notif.notify_function(notif.notify_args);
+    exit(1);
+    return;
+  } else {
+    return;
+  }
+}
+
+void tiny_uncompress_async(tiny_notifier notif) {
+  if(!fork()) {
+    tiny_uncompress();
+    notif.notify_function(notif.notify_args);
+    exit(1);
+    return;
+  } else {
+    return;
+  }
+}
+
+void tiny_finish() {
+  if (shmdt(shm) < 0) {
+    perror("[CLIENT] shmdt");
+    exit(1);
+  }
+
+  tiny_msgbuf msg;
+  msg.mtype = MSG_FIN_TYPE;
+  msg.msgdata.finish.client_key = key;
+  msgsnd(daemonq, &msg, sizeof(tiny_msgbuf), 0);
 }

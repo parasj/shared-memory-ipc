@@ -81,8 +81,6 @@ When a new client comes online, it must register with the server using the \text
 
 Once all of this is done, the server responds with a message that contains the \texttt{client\_key} created from the client's temporary file, which is the only information the client needs to connect to its private message queue and shared memory segment. The initialization request and response are sent over the global shared message queue common to all clients. This introduces the possibility of a race condition in since there is no guarantee that a particular response will reach exactly the client it was sent from. This is not really a problem, as the clients are essentially indistinguishable until the handshake is completed, and so a situation in which a client reads an initialization response message intended for another client is never problematic; the original client will simply receive a response message intended for yet another client, and all clients end up with unique IDs and keys in the end. Notice that mixing up of messages is not an issue once the handshake is done. The global shared message queue is only used for initialization; all subsequent messages between a server and client go through a per-client client-private message queue that is initialized during the handshake.
 
-% Insert figure highlighting the race condition.
-
 \subsubsection{Compressing/Uncompressing Data}
 
 \subsubsection{Cleaning Up}

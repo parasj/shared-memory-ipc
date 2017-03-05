@@ -142,7 +142,8 @@ void new_client_handler() {
   msg.mtype = MSG_INIT_RESPONSE_TYPE;
   msg.msgdata.initialize.client_key = client->client_key;
   msg.msgdata.initialize.shmid = shmid;
-  fprintf(stdout, "[SERVER] Successfully added new client number %d with key %d\n", client->client_number, client->client_key);
+  fprintf(stdout, "[SERVER] Successfully added new client number %d with key %d\n",
+          client->client_number, client->client_key);
   msgsnd(msqid, &msg, sizeof(tiny_msgbuf), 0);
 }
 
@@ -160,14 +161,13 @@ void remove_client_handler(tiny_msgbuf *msg) {
         fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
                 i->client_number);
       }
-
       if (shmdt(i->shm) == -1 || shmctl(i->shmid, IPC_RMID, NULL)) {
         perror("[SERVER] shmdt or shctl");
       } else {
         fprintf(stderr, "[SERVER] Successfully cleaned up shm for client #%d\n", i->client_number);
       }
-      
-
+      LIST_REMOVE(i, next_client);
+      free(i);
       return;
     }
   }
@@ -176,18 +176,15 @@ void remove_client_handler(tiny_msgbuf *msg) {
 }
 
 void compress_handler(char *input, size_t input_length, char *compressed, size_t *compressed_length) {
-  fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu, compressed: %p, compressd_length: %p}\n", input, input_length, compressed, compressed_length);
-
   if (snappy_compress(&env, input, input_length, outbuf, compressed_length) < 0) {
     printf("[SERVER] Snappy compression error");
   } else {
     memcpy(compressed, outbuf, *compressed_length);
   }
+  fprintf(stderr, "{type: 'compress', input: %p, input_length: %lu, compressed: %p, compressed_length: %lu}\n", input, input_length, compressed, *compressed_length);
 }
 
 void uncompress_handler(char *input, size_t input_length, char *uncompressed, size_t *uncompressed_length) {
-  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p}\n", input, input_length, uncompressed);
-  
   if (snappy_uncompress(input, input_length, outbuf) < 0) {
     printf("[SERVER] Snappy decompression error");
   } else {
@@ -197,6 +194,7 @@ void uncompress_handler(char *input, size_t input_length, char *uncompressed, si
       memcpy(uncompressed, outbuf, *uncompressed_length);
     }
   }
+  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p}\n", input, input_length, uncompressed);
 }
 
 void serve() {
@@ -228,7 +226,7 @@ void serve() {
     // TODO implement QoS
     LIST_FOREACH(c, &clients, next_client) {
       if (msgrcv(c->client_msgqid, &r, sizeof(tiny_msgbuf), 0, IPC_NOWAIT) > 0) {
-        printf("Servicing %d\n", c->client_msgqid);
+        printf("[SERVER] Servicing %d\n", c->client_msgqid);
         switch (r.mtype) {
           case MSG_CMP_TYPE: {
             compress_handler((char*) c->shm + sizeof(shm_header),
