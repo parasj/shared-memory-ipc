@@ -14,9 +14,14 @@
 #include <sys/shm.h>
 #include <sys/msg.h>
 #include <sys/queue.h>
+#include <sys/time.h>
 
 #define MSGQFILE "/tmp/.tiny_msgqfile"
 #define CLIENT_MSGQFILE_FMT "/tmp/.tiny_msgqfile.%d"
+
+#define start() struct timeval ts;gettimeofday(&ts, NULL)
+#define end()   struct timeval te;gettimeofday(&te, NULL);double startTime=ts.tv_sec+ts.tv_usec*1e-6;double endTime = te.tv_sec+te.tv_usec*1e-6
+#define TIME    endTime - startTime
 
 typedef enum msg_t {
   MSG_INIT_REQUEST_TYPE = 1,

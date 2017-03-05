@@ -22,7 +22,7 @@ void handle_done(tiny_async_args ctx, void *args) {
 int main(int argc, char *argv[]) {
     int asyncFlag = 0;
     int nfiles = 0;
-    char *filenames[32];
+    char *filenames[512];
     
     int index;
     int c;
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
         }
 
     nfiles = argc - optind;
-    assert(nfiles > 0 && nfiles < 33);
+    assert(nfiles > 0 && nfiles < 513);
     printf ("async = %d len(files) = %d\n", asyncFlag, nfiles);
 
     for (index = optind; index < argc; index++)
@@ -82,8 +82,19 @@ int main(int argc, char *argv[]) {
         if (!asyncFlag) { // blocking mode
             outbuf = (char*) malloc((filelen) * sizeof(char) * 2); // compressed could be bigger than input size!
             
-            tiny_compress(filebuf, filelen, outbuf, &outlen);
-            tiny_uncompress(outbuf, outlen, outbuf, &outlen);
+            {
+                start();
+                tiny_compress(filebuf, filelen, outbuf, &outlen);
+                end();
+                fprintf(stderr, "{\"op\": \"compress_blocking\", \"time\": %f, \"file_size\": %zu},\n", TIME, filelen);
+            }
+            
+            {
+                start();
+                tiny_uncompress(outbuf, outlen, outbuf, &outlen);
+                end();
+                fprintf(stderr, "{\"op\": \"uncompress_blocking\", \"time\": %f, \"file_size\": %zu},\n", TIME, filelen);
+            }
 
             printf("%s (", filenames[index]);
             if (outlen < 1024) {
