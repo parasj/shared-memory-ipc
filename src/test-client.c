@@ -11,25 +11,25 @@ void handle_done_un(void *args) {
 }
 
 int main(int argc, char *argv[]) {
-  tiny_notifier notif;
-  int event_count = 0; 
+  // tiny_notifier notif;
+  // int event_count = 0; 
 
-  notif.notify_function = handle_done;
-  notif.notify_args = &event_count;
+  // notif.notify_function = handle_done;
+  // notif.notify_args = &event_count;
 
-  tiny_initialize();
-  tiny_compress();
-  tiny_uncompress();
-  tiny_compress();
-  tiny_uncompress();
-  tiny_compress();
-  tiny_uncompress();
+  // tiny_initialize();
+  // tiny_compress();
+  // tiny_uncompress();
+  // tiny_compress();
+  // tiny_uncompress();
+  // tiny_compress();
+  // tiny_uncompress();
 
-  tiny_compress_async(notif);
+  // tiny_compress_async(notif);
 
-  notif.notify_function = handle_done_un;
-  usleep(100000);
-  tiny_uncompress_async(notif);
-  usleep(200000);
-  tiny_finish();
+  // notif.notify_function = handle_done_un;
+  // usleep(100000);
+  // tiny_uncompress_async(notif);
+  // usleep(200000);
+  // tiny_finish();
 }

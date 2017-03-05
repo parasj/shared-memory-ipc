@@ -51,7 +51,7 @@ void sigint_handler(int sig) {
   exit(1);
 }
 
-void initialize(int nslots, ssize_t buf_size) {
+void initialize(int nslots, size_t buf_size) {
   key_t key;
   FILE *fp = fopen(MSGQFILE, "ab+");
   if(!fp) {
@@ -91,7 +91,7 @@ void initialize(int nslots, ssize_t buf_size) {
   shm_slots = nslots;
   shm_size = buf_size;
 
-  outbuf = (char *) malloc(shm_size);
+  outbuf = (char*) malloc(shm_size);
 }
 
 void new_client_handler() {
@@ -176,6 +176,8 @@ void remove_client_handler(tiny_msgbuf *msg) {
 }
 
 void compress_handler(char *input, size_t input_length, char *compressed, size_t *compressed_length) {
+  assert(input_length <= shm_size);
+
   if (snappy_compress(&env, input, input_length, outbuf, compressed_length) < 0) {
     printf("[SERVER] Snappy compression error");
   } else {
@@ -185,16 +187,21 @@ void compress_handler(char *input, size_t input_length, char *compressed, size_t
 }
 
 void uncompress_handler(char *input, size_t input_length, char *uncompressed, size_t *uncompressed_length) {
+  assert(input_length <= shm_size);
+
+  if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
+    printf("[SERVER] Snappy decompression length error");
+  }
+
+  assert(*uncompressed_length <= shm_size);
+
   if (snappy_uncompress(input, input_length, outbuf) < 0) {
     printf("[SERVER] Snappy decompression error");
   } else {
-    if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
-      printf("[SERVER] Snappy decompression length error");
-    } else {
-      memcpy(uncompressed, outbuf, *uncompressed_length);
-    }
+    memcpy(uncompressed, outbuf, *uncompressed_length);
   }
-  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p}\n", input, input_length, uncompressed);
+
+  fprintf(stderr, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p, uncompressed_length: %zu}\n", input, input_length, uncompressed, *uncompressed_length);
 }
 
 void serve() {
@@ -260,7 +267,7 @@ void serve() {
  
 int main(int argc, char *argv[]) {
   int nsegments = 8;
-  size_t segsz = 1024 * 1024;
+  size_t segsz = 1024 * 1024 + 8;
 
   int c;
 

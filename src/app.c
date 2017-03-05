@@ -49,8 +49,11 @@ int main(int argc, char *argv[]) {
     *****************************************/
 
     FILE *fileptr;
-    char *buffer;
-    long filelen;
+    char *filebuf;
+    size_t filelen;
+
+    char *outbuf;
+    size_t outlen;
     
     // tiny_notifier notif;
     // int event_count = 0; 
@@ -65,31 +68,32 @@ int main(int argc, char *argv[]) {
         filelen = ftell(fileptr);
         rewind(fileptr);
 
-        buffer = (char* )malloc((filelen+1) * sizeof(char));
-        fread(buffer, filelen, 1, fileptr);
+        filebuf = (char*) malloc((filelen) * sizeof(char));
+        fread(filebuf, filelen, 1, fileptr);
         fclose(fileptr);
         
         if (!asyncFlag) { // blocking mode
+            outbuf = (char*) malloc((filelen) * sizeof(char));
             
+            tiny_compress(filebuf, filelen, outbuf, &outlen);
+            tiny_uncompress(outbuf, outlen, outbuf, &outlen);
+
+            printf("%s (", filenames[index]);
+            if (outlen < 1024) {
+                for(int i = 0; i < filelen; i++)
+                    printf("%02x", filebuf[i]);
+                printf("; ");
+                for(int i = 0; i < outlen; i++)
+                    printf("%02x", outbuf[i]);
+            } else
+                printf("<<OMITTED>>");
+            printf(") => %s\n", memcmp(filebuf, outbuf, filelen) ? "mismatch" : "match");
+            
+            free(outbuf);
         } else { // async mode
 
         }
 
-        free(buffer);
+        free(filebuf);
     }
-
-    // tiny_compress();
-    // tiny_uncompress();
-    // tiny_compress();
-    // tiny_uncompress();
-    // tiny_compress();
-    // tiny_uncompress();
-
-    // tiny_compress_async(notif);
-
-    // notif.notify_function = handle_done_un;
-    // usleep(100000);
-    // tiny_uncompress_async(notif);
-    // usleep(200000);
-    // tiny_finish();
 }
