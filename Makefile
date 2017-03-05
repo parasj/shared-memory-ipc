@@ -27,6 +27,9 @@ test-client: src/test-client.c ${OBJ} ${OUT}
 	$(CC) $(CFLAGS) src/test-client.c $(OUT) -o bin/test-client
 
 clean:
-	@rm -rf /tmp/.tiny_msgqfile*
-	@rm src/*.o bin/*.a bin/tinyd
+	-@rm -rf /tmp/.tiny_msgqfile*;
+	-@rm src/*.o bin/*.a bin/tinyd;
+	-@ ipcs -q | awk ' { print $2 } ' | xargs ipcrm msg 2>/dev/null;
+	-@ ipcs -s | awk ' { print $2 } ' | xargs ipcrm sem 2>/dev/null;
+	-@ ipcs -m | awk ' { print $2 } ' | xargs ipcrm shm 2>/dev/null;
 	@echo Cleaned!

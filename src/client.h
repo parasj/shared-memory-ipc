@@ -3,7 +3,7 @@
 
 #include "tiny.h"
 
-void tiny_initialize();
+int tiny_initialize();
 void tiny_compress();
 void tiny_uncompress();
 void tiny_compress_async();
