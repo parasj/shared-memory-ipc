@@ -1,11 +1,11 @@
 CC = gcc
-LDFLAGS = 
+LDFLAGS = -L snappy-c snappy-c/libsnappyc.so.1 
 LIBS = .
 SRC = src/client.c
 OBJ = $(SRC:.c=.o)
 INC1 = snappy-c/
 INCDIRS = -I ${INC1}
-CFLAGS = ${INCDIRS} -L snappy-c -l :libsnappy.so.1 -ggdb -Wall -std=gnu99
+CFLAGS = ${INCDIRS} -ggdb -Wall -std=gnu99
 
 OUT = bin/libtinyfile.a
 
@@ -18,7 +18,7 @@ $(OUT): $(OBJ)
 	ar rcs $(OUT) $(OBJ)
 
 tinyd: src/server.c
-	$(CC) $(CFLAGS) src/server.c -o bin/tinyd
+	$(CC) $(CFLAGS) src/server.c -o bin/tinyd ${LDFLAGS}
 
 test-client: src/test-client.c ${OBJ} ${OUT}
 	$(CC) $(CFLAGS) src/test-client.c $(OUT) -o bin/test-client

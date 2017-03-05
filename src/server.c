@@ -1,7 +1,7 @@
 #include "snappy.h"
 #include "tiny.h"
 typedef struct snappy_env snappy_env;
-snappy_env *env;
+snappy_env env;
 
 int msqid = 0;
 int last_client = 0;
@@ -34,7 +34,7 @@ void sigint_handler(int sig) {
     }
   }
 
-  snappy_free_env(env);
+  snappy_free_env(&env);
 
   exit(1);
 }
@@ -73,7 +73,7 @@ void initialize() {
     exit(1);
   }
 
-  snappy_init_env(env);
+  snappy_init_env(&env);
 
   LIST_INIT(&clients);
 }
@@ -162,7 +162,7 @@ void compress_handler(char *input, size_t input_length,
           "compressed: %p, compressd_length: %p}\n",
           input, input_length, compressed, compressed_length);
   char *outbuf = (char *) malloc(shm_size);
-  int ret = snappy_compress(env, input, input_length, outbuf, compressed_length);
+  int ret = snappy_compress(&env, input, input_length, outbuf, compressed_length);
   if (ret < 0)
     printf("[SERVER] Snappy compression error - %d", ret);
   memcpy(compressed, outbuf, *compressed_length);
