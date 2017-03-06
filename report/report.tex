@@ -172,7 +172,11 @@ Generally, IPC times are very consistent across various file sizes. This is a li
 
 The reasoning for generally consistent times is that the IPC is occuring in two stages -- first is the control signal which is passed through a System V IPC queue and second is the data transfer which occurs through shared memory. The first stage of IPC is generally going to be very fast. Shared memory speeds up the second stage as much as possible. For small transfers ($<$ 1 cache line), this transfer is going to be very quick. We can see that 1 byte and 10 byte transfers are quite speedy\footnote{For such small transfers, it might be better to send data directly through the message queue. But it is unlikely that users care about compressing such small messages given the storage overhead of snappy.}. The increase in latencies for 1 megabyte and 2 megabyte files may be due to cache effects.
 
-Uncompression times are generally less than the respective compression time for most file sizes. This is likely due to two factors -- 1) the data to be uncompressed was just compressed, so much of the data probably already lives in the server cache and 2) compressed files are a bit smaller than the uncompressed files so there is a little less data to transfer.
+Uncompression times are generally less than the respective compression time for most file sizes. This is likely due to two factors
+\begin{enumerate}
+\item The data to be uncompressed was just compressed, so much of the data probably already lives in the server cache
+\item Compressed files are a bit smaller than the uncompressed files so there is a little less data to transfer.
+\end{enumerate}
 
 \section{Analysis of Engineering/Design Decision}
 Several key design decisions made during implementation include the use of:

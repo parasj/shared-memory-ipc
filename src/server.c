@@ -2,15 +2,12 @@
 #include "tiny.h"
 typedef struct snappy_env snappy_env;
 
-snappy_env env;
-
-int msqid = 0;
-int last_client = 0;
-
-struct tiny_client_list clients;
-
-int shm_slots;
-size_t shm_size;
+static snappy_env env;
+static int msqid = 0;
+static int last_client = 0;
+static struct tiny_client_list clients;
+static int shm_slots;
+static size_t shm_size;
 
 // shared compression/decompression buffer
 char *outbuf;
