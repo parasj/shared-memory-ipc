@@ -5,9 +5,9 @@ void handle_done_un(tiny_async_args ctx, void *args) {
   struct sembuf semargs;
   int semid = *((int*)args);
   printf("Done uncompressing! %zu bytes -> %zu bytes\n", ctx.insz, ctx.outsz);
-  /* free(ctx.inbuf); */
   semargs.sem_num = 0;
   semargs.sem_op = -1;
+  semargs.sem_flg = 0;
   semop(semid, &semargs, 1);
   printf("%d processes left\n", semctl(semid, 0, GETVAL, NULL));
 }
@@ -19,10 +19,10 @@ void handle_done(tiny_async_args ctx, void *args) {
   tiny_notifier notif;
   notif.notify_args = args;
   notif.notify_function = handle_done_un;
-
   char *buf = (char *) malloc(ctx.outsz * sizeof(char));
   memcpy(buf, ctx.outbuf, ctx.outsz);
   tiny_uncompress_async(buf, ctx.outsz, notif);
+  free(buf);
 }
 
 int main(int argc, char *argv[]) {
@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
   }
 
   semargs.sem_op = nfiles;
+  semargs.sem_flg = 0;
   semop(semid, &semargs, 1);
   for (index = 0; index < nfiles; ++index) {
     if ((fileptr = fopen(filenames[index], "rb")) == NULL) {

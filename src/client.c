@@ -60,6 +60,7 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
   start();
   semargs.sem_num = 0; // Try to acquire the compression semaphore.
   semargs.sem_op = -1; // Wait until the semaphore has at least one available, then make it zero
+  semargs.sem_flg = 0; // Nothing Special
   semop(semid, &semargs, 1);
   /* while (((shm_header*) shm)->used > 0) {} */
   {
@@ -75,6 +76,7 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
     
   semargs.sem_num = 1; // Wait for the compression done semaphore.
   semargs.sem_op = -1; // Wait until the semaphore has at least one available, then make it zero
+  semargs.sem_flg = 0; // Nothing special 
   semop(semid, &semargs, 1);
   end();
 
@@ -86,6 +88,7 @@ void tiny_compress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
   // Release only after safely copied out.
   semargs.sem_num = 0; // Compression semaphore.
   semargs.sem_op = 1; // Release.
+  semargs.sem_flg = 0; // Nothing special
   semop(semid, &semargs, 1);
 }
 
@@ -97,6 +100,7 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
   start();
   semargs.sem_num = 0; // Try to acquire the compression semaphore.
   semargs.sem_op = -1; // Wait until the semaphore has at least one available, then make it zero
+  semargs.sem_flg = 0; // Nothing special
   semop(semid, &semargs, 1);
   {
     input_buf = ((char*) shm) + sizeof(shm_header);
@@ -117,7 +121,8 @@ void tiny_uncompress(char *inbuf, size_t insz, char *outbuf, size_t *outsz) {
   *outsz = ((shm_header*) shm)->uncompressed_length;
   fprintf(stderr, "{\"op\": \"uncompress_blocking\", \"total_time\": %f, \"ipc_time\": %f, \"file_size\": %zu},\n", TIME, TIME - ((shm_header*) shm)->snappy_time, *outsz);
 
-  memcpy(outbuf, input_buf, *outsz);
+  /* memcpy(outbuf, input_buf, *outsz); */
+  memcpy(outbuf, input_buf, ((shm_header*) shm)->uncompressed_length);
 
   // Release only after safely copied out.
   semargs.sem_num = 0; // Compression semaphore.
@@ -135,6 +140,7 @@ void tiny_compress_async(char *inbuf, size_t insz, tiny_notifier notif) {
     ctx.outbuf = (char*) malloc(ctx.insz * 2);
     tiny_compress(ctx.inbuf, ctx.insz, ctx.outbuf, &ctx.outsz);
     notif.notify_function(ctx, notif.notify_args);
+    free(ctx.inbuf);
     free(ctx.outbuf);
     exit(1);
   } else {
@@ -152,6 +158,7 @@ void tiny_uncompress_async(char *inbuf, size_t insz, tiny_notifier notif) {
     ctx.outbuf = (char*) malloc(ctx.insz * 2);
     tiny_uncompress(ctx.inbuf, ctx.insz, ctx.outbuf, &ctx.outsz);
     notif.notify_function(ctx, notif.notify_args);
+    free(ctx.inbuf);
     free(ctx.outbuf);
     exit(1);
   } else {

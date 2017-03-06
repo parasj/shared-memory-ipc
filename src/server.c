@@ -130,6 +130,7 @@ void new_client_handler() {
   struct sembuf semargs;
   semargs.sem_num = 0; // Initialize the compression semaphore
   semargs.sem_op = 1; // Give it one resource unit
+  semargs.sem_flg = 0; // Nothing special
   semop(client->client_semid, &semargs, 1);
 
   /** SHM init **/
@@ -272,6 +273,7 @@ void serve() {
                             &(((shm_header*) c->shm)->compressed_length));
             semargs.sem_num = 1;
             semargs.sem_op = 1;
+            semargs.sem_flg = 0;
             semop(c->client_semid, &semargs, 1);
             break;
           }
@@ -284,6 +286,7 @@ void serve() {
                             &(((shm_header*) c->shm)->uncompressed_length));
             semargs.sem_num = 1;
             semargs.sem_op = 1;
+            semargs.sem_flg = 0;
             semop(c->client_semid, &semargs, 1);
             break;
           }
