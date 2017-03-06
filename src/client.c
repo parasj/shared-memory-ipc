@@ -1,12 +1,12 @@
 #include "client.h"
 
-int key;
-int msgqid;
-int semid;
-key_t daemonkey;
-int daemonq;
-tiny_msgbuf msg;
-void *shm;
+static int key;
+static int msgqid;
+static int semid;
+static key_t daemonkey;
+static int daemonq;
+static tiny_msgbuf msg;
+static void *shm;
 
 int tiny_initialize() {
   if ((daemonkey = ftok(MSGQFILE, 'b')) == -1) {

@@ -2,13 +2,12 @@
  "report"
  (lambda ()
    (TeX-add-to-alist 'LaTeX-provided-class-options
-                     '(("scrartcl" "paper=a4" "fontsize=11pt")))
+                     '(("report" "paper=a4" "fontsize=11pt")))
    (TeX-add-to-alist 'LaTeX-provided-package-options
-                     '(("fontenc" "T1") ("babel" "english")))
+                     '(("fontenc" "T1") ("babel" "english") ("geometry" "margin=1.5in")))
    (TeX-run-style-hooks
     "latex2e"
-    "scrartcl"
-    "scrartcl10"
+    "rep10"
     "fontenc"
     "fourier"
     "graphicx"
@@ -18,6 +17,7 @@
     "amsmath"
     "amsfonts"
     "amsthm"
+    "geometry"
     "lipsum"
     "sectsty"
     "fancyhdr")
