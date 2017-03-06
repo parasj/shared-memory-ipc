@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
 #include <sys/msg.h>
 #include <sys/queue.h>
 #include <sys/time.h>
@@ -51,6 +52,7 @@ typedef struct tiny_client {
   int client_number;
   int client_key;
   int client_msgqid;
+  int client_semid;
   int shmid;
   void *shm;
   LIST_ENTRY(tiny_client) next_client;

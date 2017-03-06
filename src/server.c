@@ -37,6 +37,12 @@ void sigint_handler(int sig) {
       fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
               i->client_number);
     }
+    if(semctl(i->client_semid, 0, IPC_RMID, NULL) == -1) {
+      perror("[SERVER] semctl (already closed?)");
+    } else {
+      fprintf(stderr, "[SERVER] Successfully closed semaphores for client #%d\n",
+              i->client_number);
+    }
     if (shmdt(i->shm) == -1 || shmctl(i->shmid, IPC_RMID, NULL)) {
       perror("[SERVER] shmdt or shctl (already closed?)");
     } else {
@@ -116,6 +122,19 @@ void new_client_handler() {
     exit(1);
   }
 
+  if ((client->client_semid = semget(client->client_key, 2, 0666 | IPC_CREAT)) == -1) {
+    perror("[CLIENT] new client semget");
+    exit(1);
+  } else {
+    fprintf(stderr, "[SERVER] got semaphore set with semid %d for client %d\n",
+            client->client_semid, client->client_number);
+  }
+
+  struct sembuf semargs;
+  semargs.sem_num = 0; // Initialize the compression semaphore
+  semargs.sem_op = 1; // Give it one resource unit
+  semop(client->client_semid, &semargs, 1);
+
   /** SHM init **/
   int shmid;
   size_t shmtot = shm_size * shm_slots + sizeof(shm_header);
@@ -142,7 +161,7 @@ void new_client_handler() {
   msg.mtype = MSG_INIT_RESPONSE_TYPE;
   msg.msgdata.initialize.client_key = client->client_key;
   msg.msgdata.initialize.shmid = shmid;
-  fprintf(stderr, "[SERVER] Successfully added new client number %d with key %d\n",
+  fprintf(stderr, "[SERVER] Successfully added new client number %d with key %x\n",
           client->client_number, client->client_key);
   msgsnd(msqid, &msg, sizeof(tiny_msgbuf), 0);
 }
@@ -159,6 +178,12 @@ void remove_client_handler(tiny_msgbuf *msg) {
         perror("[SERVER] msgctl");
       } else {
         fprintf(stderr, "[SERVER] Successfully closed message queue for client #%d\n",
+                i->client_number);
+      }
+      if(semctl(i->client_semid, 0, IPC_RMID, NULL) == -1) {
+        perror("[SERVER] semctl");
+      } else {
+        fprintf(stderr, "[SERVER] Successfully closed semaphores for client #%d\n",
                 i->client_number);
       }
       if (shmdt(i->shm) == -1 || shmctl(i->shmid, IPC_RMID, NULL)) {
@@ -193,15 +218,18 @@ double uncompress_handler(char *input, size_t input_length, char *uncompressed, 
   start();
   if (!snappy_uncompressed_length(input, input_length, uncompressed_length)) {
     fprintf(stderr, "[SERVER] Snappy decompression length error\n");
+    *uncompressed_length = 0;
   }
 
   assert(*uncompressed_length <= shm_size);
 
   if (snappy_uncompress(input, input_length, outbuf) < 0) {
     fprintf(stderr, "[SERVER] Snappy decompression error\n");
+    *uncompressed_length = 0;
   } else {
     memcpy(uncompressed, outbuf, *uncompressed_length);
   }
+
   fprintf(stdout, "{type: 'uncompress', compressed: %p, length: %lu, uncompressed: %p, uncompressed_length: %zu}\n", input, input_length, uncompressed, *uncompressed_length);
   end();
   return TIME;
@@ -210,6 +238,7 @@ double uncompress_handler(char *input, size_t input_length, char *uncompressed, 
 void serve() {
   tiny_msgbuf r;
   tiny_client *c;
+  struct sembuf semargs;
 
   while(1) {
     // Step 1: service pending client registration/deregistration requests on the main message queue
@@ -236,7 +265,7 @@ void serve() {
     // TODO implement QoS
     LIST_FOREACH(c, &clients, next_client) {
       if (msgrcv(c->client_msgqid, &r, sizeof(tiny_msgbuf), 0, IPC_NOWAIT) > 0) {
-        fprintf(stderr, "[SERVER] Servicing %d\n", c->client_msgqid);
+        /* fprintf(stderr, "[SERVER] Servicing %d\n", c->client_msgqid); */
         switch (r.mtype) {
           case MSG_CMP_TYPE: {
             ((shm_header*) c->shm)->snappy_time =
@@ -244,7 +273,9 @@ void serve() {
                             ((shm_header*) c->shm)->uncompressed_length,
                             (char*) c->shm + sizeof(shm_header),
                             &(((shm_header*) c->shm)->compressed_length));
-            ((shm_header*) c->shm)->used = 2;
+            semargs.sem_num = 1;
+            semargs.sem_op = 1;
+            semop(c->client_semid, &semargs, 1);
             break;
           }
           
@@ -254,7 +285,9 @@ void serve() {
                             ((shm_header*) c->shm)->compressed_length,
                             (char*) c->shm + sizeof(shm_header),
                             &(((shm_header*) c->shm)->uncompressed_length));
-            ((shm_header*) c->shm)->used = 2;
+            semargs.sem_num = 1;
+            semargs.sem_op = 1;
+            semop(c->client_semid, &semargs, 1);
             break;
           }
 
