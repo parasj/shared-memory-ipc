@@ -150,20 +150,36 @@ All this functionality can be tested using the TinyFile compressor utility. This
 
 To use the application, \texttt{`./bin/tiny [-a] file1 file2 file3 file4'} where \texttt{-a} is an optional argument that tests the asynchronous API. Files need not be unique.
 
-\section{Performance}
+\section{Testing}
 
 \subsection{Testing methodology}
 To test the program, we mix a variety of synthetic and real datasets. These include both binary and text files. For text datasets, we use public domain books. For synthetic data, we generated various order-of-magnitude datasets using \texttt{/dev/urandom}. This data should be difficult to compress and allows for stress testing the system.
 
 \subsection{Correctness evaluation}
+The code was correct on all inputs tested, specifically: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
 
-The code was correct on all inputs tested, specifically the files in the \texttt{data} folder: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
+\subsection{Performance evaluation}
 
-\section{Analysis of Engineering Tradeoffs}
+\begin{figure}[htb!]
+  \includegraphics[width=\linewidth]{img/chart_full1.pdf}
+  \caption{Round-trip IPC latencies for compression and decompression, across various file sizes. File size in bytes is labeled above. Times are in seconds. Note that the vertical axis is logarithmic.}
+  \label{ipc_time_chart}
+\end{figure}
 
+Performance was tested across a variety of file sizes. This was to understand what the bottlenecks in the algorithm were across various file sizes. Figure \ref{ipc_time_chart} displays the results of this experiment.\footnote{Asynchronous and blocking IPC latencies were very similar given our efficient implementation of the asycnhronous API using callbacks. Thus, Figure \ref{ipc_time_chart} only displays results for the blocking API.}
+
+Generally, IPC times are very consistent across various file sizes. This is a little surprising initially, given that there is a difference of 6 orders of magnitude between the largest and smallest test case. From 1 byte to 100 kilobytes, IPC times are generally very consistent. Times increase significantly when processing 1 megabyte and times increase slighty when processing 2 megabytes.
+
+The reasoning for generally consistent times is that the IPC is occuring in two stages -- first is the control signal which is passed through a System V IPC queue and second is the data transfer which occurs through shared memory. The first stage of IPC is generally going to be very fast. Shared memory speeds up the second stage as much as possible. For small transfers ($<$ 1 cache line), this transfer is going to be very quick. We can see that 1 byte and 10 byte transfers are quite speedy\footnote{For such small transfers, it might be better to send data directly through the message queue. But it is unlikely that users care about compressing such small messages given the storage overhead of snappy.}. The increase in latencies for 1 megabyte and 2 megabyte files may be due to cache effects.
+
+Uncompression times are generally less than the respective compression time for most file sizes. This is likely due to two factors -- 1) the data to be uncompressed was just compressed, so much of the data probably already lives in the server cache and 2) compressed files are a bit smaller than the uncompressed files so there is a little less data to transfer.
+
+\section{Analysis of Engineering/Design Decision}
+Several key design decisions made during implementation include the use of:
 \begin{enumerate}
 \item \textbf{Multiple private message buffers}: Allows for simpler client/server communication, instead of multiplexing messages over a single message buffer to make sure they reach the right client. This also makes implementing QoS easier; the list of message queues just becomes a priority queue, so that higher priority clients are serviced first. The cost of this is that we now need to iterate over all of the message queues to find out if any of them contain a request to service, incurring a cost linear in the number of clients. In practice, it is unlikely that the service will see enough clients to make this an issue, although it would be possible to shift to a more complex single queue approach given more time. 
-\item \textbf{Multiple shared memory segments}: Given the guarantee of small file sizes (at most 1MB), using multiple shared memory segments for a single client is wasteful, and so we initialize a single relatively large (10MB by default) shared memory segment per client. We could have used a single segment across all clients, but this would result in large multiplexing/demultiplexing overheads and result in additional complexity.
+\item \textbf{Multiple shared memory segments}: Given the guarantee of small file sizes (at most 1MB), using multiple shared memory segments for a single client is wasteful, and so we initialize a single relatively large (10MB by default) shared memory segment per client. We could have used a single segment across all clients, but this would result in large multiplexing/demultiplexing overheads and result in additional complexity. This could also open the service up to security vulnrabilities with decreased isolation (i.e. buffer overflow attacks).
+\item \textbf{Callback API for asynchronous calls}: We chose to use callbacks instead of having the client call a function to retrieve results later as the implementation is simpler from both the client perspective and the service perspective. This is due to asynchronous calls being thin wrappers around the blocking calls.
 \end{enumerate}
 
 \end{document}
