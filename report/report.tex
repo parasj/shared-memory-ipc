@@ -156,8 +156,6 @@ To use the application, \texttt{`./bin/tiny [-a] file1 file2 file3 file4'} where
 To test the program, we mix a variety of synthetic and real datasets. These include both binary and text files. For text datasets, we use public domain books. For synthetic data, we generated various order-of-magnitude datasets using \texttt{/dev/urandom}. This data should be difficult to compress and allows for stress testing the system.
 
 \subsection{Correctness evaluation}
-
-<<<<<<< HEAD
 The code was correct on all inputs tested, specifically: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
 
 \subsection{Performance evaluation}
@@ -178,15 +176,7 @@ Uncompression times are generally less than the respective compression time for 
 
 \section{Analysis of Engineering/Design Decision}
 
-\subsection{Large shm segment per client vs shared ring-buffer}
-There were two options for desiging the system with regards to how data is transferred between clients and the server. One option is to use a ring buffer, as used in Xen. The other option is to dedicate a shared memory space to each client which they can use to transfer data for the in-flight request. There were several considerations in deciding which one to use. Ultimately, we chose to implement the private shm segment per client.
-
-\subsubsection{Security}
-=======
-The code was correct on all inputs tested, specifically the files in the \texttt{data} folder: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
->>>>>>> f00e5220a1ced398d3afe2036343809dfcb17a79
-
-
+\subsection{Choice of message buffers versus shm segments}
 \begin{enumerate}
 \item \textbf{Multiple private message buffers}: Allows for simpler client/server communication, instead of multiplexing messages over a single message buffer to make sure they reach the right client. This also makes implementing QoS easier; the list of message queues just becomes a priority queue, so that higher priority clients are serviced first. The cost of this is that we now need to iterate over all of the message queues to find out if any of them contain a request to service, incurring a cost linear in the number of clients. In practice, it is unlikely that the service will see enough clients to make this an issue, although it would be possible to shift to a more complex single queue approach given more time. 
 \item \textbf{Multiple shared memory segments}: Given the guarantee of small file sizes (at most 1MB), using multiple shared memory segments for a single client is wasteful, and so we initialize a single relatively large (10MB by default) shared memory segment per client. We could have used a single segment across all clients, but this would result in large multiplexing/demultiplexing overheads and result in additional complexity.
