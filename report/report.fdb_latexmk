@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1488754267 "report.tex" "report.pdf" "report" 1488754269
+["pdflatex"] 1488763866 "report.tex" "report.pdf" "report" 1488763868
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/jknappen/ec/ecrm1000.tfm" 1136768653 3584 adb004a0c8e7c46ee66cad73671f37b4 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/jknappen/ec/ectt1000.tfm" 1136768653 1536 06717a2b50de47d4087ac0e6cd759455 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -15,10 +15,12 @@
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/fourier-ml.tfm" 1136768653 1120 281c7872a1f3fc686c053051e921a432 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/fourier-mlit.tfm" 1136768653 1076 2f8bbd0154a18a0fd665f046ebdfecb3 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/fourier-ms.tfm" 1136768653 1184 c045430d3c50e3ac06be4ea09e23cd04 ""
+  "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/fourier-orns.tfm" 1136768653 636 5dc4c4a046347e5d996d971478eccc07 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futb8r.tfm" 1136768653 1632 db17fd263f07874754701ae1606f47de ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futb8t.tfm" 1136768653 16496 8cfc6552dd51c5fbd6801fd8a98501ea ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futmi.tfm" 1136768653 3908 134bee7e89e5ea037d022133b5d70a90 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futmii.tfm" 1136768653 4268 369df562297bf2e301343889d3c1c433 ""
+  "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futr8c.tfm" 1136768653 1384 12e9c5d934b44698c5b32e56431ae151 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futr8r.tfm" 1136768653 1624 538d715a58a983dc183e18316ca72926 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futr8t.tfm" 1136768653 16984 6d4d92d3efaef5cab6a470d5d5548d56 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/tfm/public/fourier/futrc8t.tfm" 1136768653 26092 182e5050cf835115f1b6eb9b94c009ee ""
@@ -29,6 +31,7 @@
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futb8t.vf" 1136768653 2168 d2ac693e07cd79dbc2b914caee3e8df0 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futmi.vf" 1136768653 1164 c0b9e6c7779f90485c7374d946ab21ae ""
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futmii.vf" 1136768653 1332 62b87bc157157fd0616b8398929f8399 ""
+  "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futr8c.vf" 1136768653 3472 98a72fa2fe6e50e20b8f3acbbac2b78e ""
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futr8t.vf" 1136768653 2168 e13210e675696694c4e23c8405ebd134 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futrc8t.vf" 1136768653 3544 7e517f82a1ea2008996633b01973df28 ""
   "/usr/local/texlive/2016/texmf-dist/fonts/vf/public/fourier/futsy.vf" 1136768653 1244 1f4b25246745a5efc1d2ad7087b5a9e9 ""
@@ -75,6 +78,7 @@
   "/usr/local/texlive/2016/texmf-dist/tex/latex/fourier/fourier-orns.sty" 1137110168 1677 589eddc75f98c1b83abe9d1f1007ef8c ""
   "/usr/local/texlive/2016/texmf-dist/tex/latex/fourier/fourier.sty" 1137110168 14587 5ab3db6bde809931d7e61b01babd4b61 ""
   "/usr/local/texlive/2016/texmf-dist/tex/latex/fourier/t1futs.fd" 1137110168 1110 49fc682812e5bf3bf06c16254f321544 ""
+  "/usr/local/texlive/2016/texmf-dist/tex/latex/fourier/ts1futs.fd" 1137110168 787 c175f3f067e9cf9e9a081d17f0c93490 ""
   "/usr/local/texlive/2016/texmf-dist/tex/latex/geometry/geometry.sty" 1284422013 40502 e003406220954b0716679d7928aedd8a ""
   "/usr/local/texlive/2016/texmf-dist/tex/latex/graphics-cfg/graphics.cfg" 1459978653 3103 f32642b1cd56c010cdfb6545539b7f0b ""
   "/usr/local/texlive/2016/texmf-dist/tex/latex/graphics/graphics.sty" 1462915952 14391 bd64a9e5d07473b936423b5f3280ed2c ""
@@ -94,9 +98,9 @@
   "/usr/local/texlive/2016/texmf-var/web2c/luatex/lualatex.fmt" 1463979171 1200794 cf331090119301b64fcdce27114c5f16 ""
   "img/init.png" 1488748052 172134 a72c451171fe0ba61dd5ebd17bf23179 ""
   "img/ll.png" 1488748052 161735 789fd0709108a252c1c3701d1e2cbff3 ""
-  "report.aux" 1488754269 1039 ab2f3fd0f94ce435e72f22f5084187d7 ""
-  "report.tex" 1488754265 8679 dc891d1931251f07ec07405423c44add ""
+  "report.aux" 1488763868 1760 8346ac3ade51729fd593e42da7936a6b ""
+  "report.tex" 1488763864 13272 bb0dcb9026196d86af627a04c986ba07 ""
   (generated)
-  "report.pdf"
   "report.log"
+  "report.pdf"
   "report.aux"

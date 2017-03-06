@@ -114,6 +114,58 @@ Clients degister themselves by sending a message on the main server IPC queue (n
 
 \section{API}
 
+\subsection{Starting and running the server}
+The server can be started using \texttt{bin/tinyd}. This program takes several optional arguments: `\texttt{bin/tinyd -n N -s S}' where \texttt{N} represents the number of shared memory slots per client and \texttt{S} represents the size of each slot. The server now runs as a daemon until it is killed, during which time it will process requests.
+
+\subsection{Initialization and Cleanup API}
+Two functions control initialization and cleanup for the client:
+\begin{itemize}
+	\item \texttt{tiny\_initialize} initializes the connection with the daemon. Specificallt, this will load the main IPC message queue to the server, send a message to request to join the client group and then recieve private IPC information which contains a private shared memory mapping identifier, a semaphore for locking and an identifier for a private message queue channel.
+	\item \texttt{tiny\_finish} cleans up the shared memory region and unattaches it from its memory address space. Finally, it notifies the server so that various server-side data strutures and IPC mechanisms can be cleaned up.
+\end{itemize}
+
+\subsection{Blocking API}
+There are several key functions in the blocking API for TinyFile:
+\begin{itemize}
+	\item \texttt{tiny\_compress} issues a request to compress some data and then blocks until the server has placed the results in shared memory. Finally, it copies the compressed data and returns the final buffer to the caller.
+	\item \texttt{tiny\_uncompress} operates similarly to compression, but requests the server uncompress the data rather than compress it.
+\end{itemize}
+
+This simple API allows users to quickly compress and decompress tasks in the server by simply linking a small client library. Performance tests of this library show that it is fast and efficient for the desired workload of 1MB files.
+
+
+\subsection{Asynchronous API}
+In addition to the calls provided by blocking API, we provide an asynchronous API which allows clients to continue to perform work while their file is being processed. The asynchronous API lets clients register callbacks when requesting a file be compressed or uncompressed. This made implementation less tricky while also keeping the API simpler. We provide two extra functions:
+\begin{itemize}
+	\item \texttt{tiny\_compress\_async} which takes in a buffer and compresses the data, asynchronously invoking the callback argument when processing is complete.
+	\item \texttt{tiny\_uncompress\_async} is very similar to compression.
+\end{itemize}
+
+Both functions call their respective blocking API counterparts. The calls are made asynchronous through the use of a call to \texttt{fork} which blocks on a separate thread. This made implementation simpler and also makes it easier for the server to manage requests as it doesn't need to keep around stale buffers whose clients have not retrieved their result.
+
+
+\subsection{TinyFile client application}
+
+All this functionality can be tested using the TinyFile compressor utility. This tool takes in a list of files as arugments and will compress the data and then uncompress the data again. Finally, it will verify the data is the same, thereby ensuring correctness of the compression algorithm. Timing events are printed which allow benchmarking the performance of the application.
+
+To use the application, `bin/tiny [-a] file1 file2 file3 file4' where \texttt{-a} is an optional argument that tests the asynchronous API. Files need not be unique.
+
 \section{Performance}
+
+\subsection{Testing methodology}
+To test the program, we mix a variety of synthetic and real datasets. These include both binary and text files. For text datasets, we use public domain books. For synthetic data, we generated various order-of-magnitude datasets using \texttt{/dev/urandom}. This data should be difficult to compress and allows for stress testing the system.
+
+\subsection{Correctness evaluation}
+
+The code was correct on all inputs tested, specifically: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
+
+
+
+
+\section{Analysis of Engineering Tradeoffs}
+
+Security (reusing buffers) -> private buffer per client, another reason we didn't use IO ring
+Performance and overhead
+Consideration of the usecase for a compression service (not likely that service is being called with huge parallelism, and working with files means it is better to make use of the very limited 32MB shared memory space where dividing it would be less productive)
 
 \end{document}
