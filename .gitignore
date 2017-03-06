@@ -36,3 +36,6 @@ bin/*
 src/GPATH
 src/GRTAGS
 src/GTAGS
+
+report/
+!report/report.tex

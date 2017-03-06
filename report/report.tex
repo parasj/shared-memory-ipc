@@ -64,7 +64,7 @@ In order to support inter-process communication between clients and the server, 
 The TinyFile application is structured as a client-server program. The server is a standalone daemon that accepts requests to compress files from clients. The client is a library that is linked into client applications that need to use the application. Client applications call exported functions from the client library to send data they want compressed to the compression server running separately as a daemon, which responds with the compressed version of the file.
 
 \subsection{Server Design}
-The server \texttt{bin/tinyd} allows users to start a daemon which listens for incoming compression requests. After initialization, the server alternates between servicing client requests to join/leave the service and actual compression requests.
+The server \texttt{./bin/tinyd} allows users to start a daemon which listens for incoming compression requests. After initialization, the server alternates between servicing client requests to join/leave the service and actual compression requests.
 
 \subsubsection{Data Structures}
 The server maintains state for each client it is currently communicating with, and calls out to the snappy-c library to actually perform the requested compression. Client state is tracked in a linked-list structure that records, for each client, the private message queue and the shared memory segment used to perform client-server communication.
@@ -148,7 +148,7 @@ Both functions call their respective blocking API counterparts. The calls are ma
 
 All this functionality can be tested using the TinyFile compressor utility. This tool takes in a list of files as arugments and will compress the data and then uncompress the data again. Finally, it will verify the data is the same, thereby ensuring correctness of the compression algorithm. Timing events are printed which allow benchmarking the performance of the application.
 
-To use the application, `bin/tiny [-a] file1 file2 file3 file4' where \texttt{-a} is an optional argument that tests the asynchronous API. Files need not be unique.
+To use the application, \texttt{`./bin/tiny [-a] file1 file2 file3 file4'} where \texttt{-a} is an optional argument that tests the asynchronous API. Files need not be unique.
 
 \section{Performance}
 
@@ -157,15 +157,13 @@ To test the program, we mix a variety of synthetic and real datasets. These incl
 
 \subsection{Correctness evaluation}
 
-The code was correct on all inputs tested, specifically: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
-
-
-
+The code was correct on all inputs tested, specifically the files in the \texttt{data} folder: \texttt{1bfile}, \texttt{10bfile}, \texttt{100bfile}, \texttt{1kfile}, \texttt{10kfile}, \texttt{100kfile}, \texttt{1mfile}, \texttt{2mfile}, \texttt{alice.txt}, \texttt{pride.txt} and \texttt{sherlock.txt}.
 
 \section{Analysis of Engineering Tradeoffs}
 
-Security (reusing buffers) -> private buffer per client, another reason we didn't use IO ring
-Performance and overhead
-Consideration of the usecase for a compression service (not likely that service is being called with huge parallelism, and working with files means it is better to make use of the very limited 32MB shared memory space where dividing it would be less productive)
+\begin{enumerate}
+\item \textbf{Multiple private message buffers}: Allows for simpler client/server communication, instead of multiplexing messages over a single message buffer to make sure they reach the right client. This also makes implementing QoS easier; the list of message queues just becomes a priority queue, so that higher priority clients are serviced first. The cost of this is that we now need to iterate over all of the message queues to find out if any of them contain a request to service, incurring a cost linear in the number of clients. In practice, it is unlikely that the service will see enough clients to make this an issue, although it would be possible to shift to a more complex single queue approach given more time. 
+\item \textbf{Multiple shared memory segments}: Given the guarantee of small file sizes (at most 1MB), using multiple shared memory segments for a single client is wasteful, and so we initialize a single relatively large (10MB by default) shared memory segment per client. We could have used a single segment across all clients, but this would result in large multiplexing/demultiplexing overheads and result in additional complexity.
+\end{enumerate}
 
 \end{document}
